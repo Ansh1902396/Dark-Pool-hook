@@ -1,5 +1,5 @@
 [workspace]
-members = ["operator/rust/crates/operator/", "operator/rust/crates/utils/"]
+members = [ "lib","operator/rust/crates/operator/", "operator/rust/crates/utils/", "program"]
 
 resolver = "2"
 
@@ -21,7 +21,7 @@ rust_2018_idioms = { level = "deny", priority = -1 }
 
 
 [workspace.lints]
-rustdoc.all = "warn"
+rustdoc = { all = "warn" }
 
 
 [workspace.dependencies]
@@ -39,6 +39,10 @@ serde = "1.0.214"
 
 hello-world-avs-operator = { path = "operator/rust/crates/operator" }
 hello-world-utils = { path = "operator/rust/crates/utils" }
+program = { path = "program" }
 
 alloy = { version = "0.13", features = ["full"] }
 eigensdk = { version = "=1.0.0-rc.0", features = ["full"] }
+alloy-sol-types = { version = "1.2.0" }
+sp1-zkvm = { version = "5.0.0" }
+fibonacci-lib = { path = "../lib" }
