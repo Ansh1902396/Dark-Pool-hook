@@ -1,17 +1,17 @@
 [package]
 name = "program"
-version = { workspace = true }
-edition = { workspace = true }
-authors = { workspace = true }
-rust-version = { workspace = true }
-repository = { workspace = true }
-homepage = { workspace = true }
-license-file = { workspace = true }
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+homepage.workspace = true
+license-file.workspace = true
 
 [dependencies]
-alloy-sol-types = { workspace = true }
-sp1-zkvm = { workspace = true }
-fibonacci-lib = { workspace = true }
+alloy-sol-types.workspace = true
+sp1-zkvm.workspace = true
+fibonacci-lib.workspace = true
 
 
 [lints]

@@ -5709,6 +5709,7 @@ name = "program"
 version = "0.0.1-alpha"
 dependencies = [
  "alloy-sol-types 1.2.0",
+ "fibonacci-lib",
  "sp1-zkvm",
 ]
 
