@@ -2,6 +2,11 @@
 // This program proves order validity without revealing order details
 #![no_main]
 sp1_zkvm::entrypoint!(main);
+use k256::{
+    ecdsa::{signature::Verifier, Signature, VerifyingKey},
+    elliptic_curve::sec1::ToEncodedPoint,
+    PublicKey,
+};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use sp1_zkvm::io;
