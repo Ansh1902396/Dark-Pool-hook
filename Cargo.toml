@@ -35,7 +35,7 @@ tokio = { version = "1.37.0", features = [
     "macros",
 ] }
 
-serde = "1.0.214"
+serde = { version = "1.0.214", features = ["derive"] }
 
 hello-world-avs-operator = { path = "operator/rust/crates/operator" }
 hello-world-utils = { path = "operator/rust/crates/utils" }
@@ -44,6 +44,4 @@ program = { path = "program" }
 alloy = { version = "0.13", features = ["full"] }
 eigensdk = { version = "=1.0.0-rc.0", features = ["full"] }
 alloy-sol-types = { version = "1.2.0" }
-sp1-zkvm = { version = "5.0.0" }
 
-fibonacci-lib = { path = "lib" }
