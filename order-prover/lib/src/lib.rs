@@ -1,4 +1,8 @@
+use core::hash;
+
 use alloy_sol_types::sol;
+use alloy_sol_types::sol_data::Address;
+use poseidon_rs::Poseidon;
 
 sol! {
     /// The public values encoded as a struct that can be easily deserialized inside Solidity.
@@ -8,15 +12,29 @@ sol! {
         uint32 b;
     }
 }
+pub struct Order {
+    ///ERC-20 the trader will pay
+    pub side: u8,
 
-/// Compute the n'th fibonacci number (wrapping around on overflows), using normal Rust code.
-pub fn fibonacci(n: u32) -> (u32, u32) {
-    let mut a = 0u32;
-    let mut b = 1u32;
-    for _ in 0..n {
-        let c = a.wrapping_add(b);
-        a = b;
-        b = c;
-    }
-    (a, b)
+    pub token_in: Address,
+
+    ///ERC-20 the trader will receive
+    pub token_out: Address,
+
+    ///Amount of token_in the trader will pay
+    pub amount_in: u128,
+
+    ///Amount of token_out the trader will receive
+    pub amount_out: u128,
+
+    ///Limit price for the order
+    pub limit_px: u128,
+}
+
+pub fn build_wallet_tree(
+    leaves: &[(Address, u128)],
+    prove_token: Address,
+    prove_index: u32,
+) -> ([u8; 32], [[u8; 32]; 32], u128) {
+    unimplemented!();
 }
