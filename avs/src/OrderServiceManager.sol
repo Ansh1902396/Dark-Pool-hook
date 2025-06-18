@@ -16,12 +16,39 @@ import {IAllocationManager} from "@eigenlayer/contracts/interfaces/IAllocationMa
 import {TransparentUpgradeableProxy} from
     "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 
-/**
- * @title Primary entrypoint for procuring services from HelloWorld.
- * @author Eigen Labs, Inc.
- */
-contract HelloWorldServiceManager is ECDSAServiceManagerBase, IHelloWorldServiceManager {
+
+interface IDarkCowHook {
+    struct TransferBalance {
+        uint256 amount;
+        address currency;
+        address sender;
+    }
+
+    struct SwapBalance {
+        int256 amountSpecified;
+        bool zeroForOne;
+        uint160 sqrtPriceLimitX96;
+    }
+
+    function settleBalances(
+        bytes32 key,
+        TransferBalance[] memory transferBalances,
+        SwapBalance[] memory swapBalances
+    ) external;
+}
+
+contract HelloWorldServiceManager is ECDSAServiceManagerBase, IOrderServiceManager {
     using ECDSAUpgradeable for bytes32;
+
+    struct Task {
+        bool zeroForOne;
+        int256 amountSpecified;
+        uint160 sqrtPriceLimitX96;
+        address sender;
+        bytes32 poolId;
+        uint32 taskCreatedBlock;
+        uint32 taskId;
+    }
 
     uint32 public latestTaskNum;
 
@@ -40,13 +67,22 @@ contract HelloWorldServiceManager is ECDSAServiceManagerBase, IHelloWorldService
 
     // max interval in blocks for responding to a task
     // operators can be penalized if they don't respond in time
+    // Or better the operators can cancell there current task of matching and do a Limit Order instead 
     uint32 public immutable MAX_RESPONSE_INTERVAL_BLOCKS;
+
+    event NewTaskCreated(uint32 indexed taskIndex, Task task);
+    event BatchResponse(uint32[] indexed referenceTaskIndices, address sender);
 
     modifier onlyOperator() {
         require(
             ECDSAStakeRegistry(stakeRegistry).operatorRegistered(msg.sender),
             "Operator must be the caller"
         );
+        _;
+    }
+
+    modifier onlyHook() {
+        require(msg.sender == hook, "Only hook can call this function");
         _;
     }
 
@@ -72,6 +108,8 @@ contract HelloWorldServiceManager is ECDSAServiceManagerBase, IHelloWorldService
     function initialize(address initialOwner, address _rewardsInitiator) external initializer {
         __ServiceManagerBase_init(initialOwner, _rewardsInitiator);
     }
+
+    
 
     // These are just to comply with IServiceManager interface
     function addPendingAdmin(
@@ -104,19 +142,24 @@ contract HelloWorldServiceManager is ECDSAServiceManagerBase, IHelloWorldService
     /* FUNCTIONS */
     // NOTE: this function creates new task, assigns it a taskId
     function createNewTask(
-        string memory name
-    ) external returns (Task memory) {
-        // create a new task struct
-        Task memory newTask;
-        newTask.name = name;
-        newTask.taskCreatedBlock = uint32(block.number);
-
-        // store hash of task onchain, emit event, and increase taskNum
-        allTaskHashes[latestTaskNum] = keccak256(abi.encode(newTask));
-        emit NewTaskCreated(latestTaskNum, newTask);
-        latestTaskNum = latestTaskNum + 1;
-
-        return newTask;
+        bool zeroForOne,
+        int256 amountSpecified,
+        uint160 sqrtPriceLimitX96,
+        address sender,
+        bytes32 poolId
+    ) external onlyHook {
+        Task memory task = Task({
+            zeroForOne: zeroForOne,
+            amountSpecified: amountSpecified,
+            sqrtPriceLimitX96: sqrtPriceLimitX96,
+            sender: sender,
+            poolId: poolId,
+            taskCreatedBlock: uint32(block.number),
+            taskId: latestTaskNum
+        });
+        allTaskHashes[latestTaskNum] = keccak256(abi.encode(task));
+        emit NewTaskCreated(latestTaskNum, task);
+        latestTaskNum++;
     }
 
     function respondToTask(
@@ -178,29 +221,29 @@ contract HelloWorldServiceManager is ECDSAServiceManagerBase, IHelloWorldService
         uint32 referenceTaskIndex,
         address operator
     ) external {
-        // check that the task is valid, hasn't been responsed yet
-        require(
-            keccak256(abi.encode(task)) == allTaskHashes[referenceTaskIndex],
-            "supplied task does not match the one recorded in the contract"
-        );
-        require(!taskWasResponded[referenceTaskIndex], "Task has already been responded to");
-        require(
-            allTaskResponses[operator][referenceTaskIndex].length == 0,
-            "Operator has already responded to the task"
-        );
-        require(
-            block.number > task.taskCreatedBlock + MAX_RESPONSE_INTERVAL_BLOCKS,
-            "Task response time has not expired yet"
-        );
-        // check operator was registered when task was created
-        uint256 operatorWeight = ECDSAStakeRegistry(stakeRegistry).getOperatorWeightAtBlock(
-            operator, task.taskCreatedBlock
-        );
-        require(operatorWeight > 0, "Operator was not registered when task was created");
+        // // check that the task is valid, hasn't been responsed yet
+        // require(
+        //     keccak256(abi.encode(task)) == allTaskHashes[referenceTaskIndex],
+        //     "supplied task does not match the one recorded in the contract"
+        // );
+        // require(!taskWasResponded[referenceTaskIndex], "Task has already been responded to");
+        // require(
+        //     allTaskResponses[operator][referenceTaskIndex].length == 0,
+        //     "Operator has already responded to the task"
+        // );
+        // require(
+        //     block.number > task.taskCreatedBlock + MAX_RESPONSE_INTERVAL_BLOCKS,
+        //     "Task response time has not expired yet"
+        // );
+        // // check operator was registered when task was created
+        // uint256 operatorWeight = ECDSAStakeRegistry(stakeRegistry).getOperatorWeightAtBlock(
+        //     operator, task.taskCreatedBlock
+        // );
+        // require(operatorWeight > 0, "Operator was not registered when task was created");
 
-        // we update the storage with a sentinel value
-        allTaskResponses[operator][referenceTaskIndex] = "slashed";
+        // // we update the storage with a sentinel value
+        // allTaskResponses[operator][referenceTaskIndex] = "slashed";
 
-        // TODO: slash operator
+        // // TODO: slash operator
     }
 }
