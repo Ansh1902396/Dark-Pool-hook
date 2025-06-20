@@ -2,14 +2,7 @@ use alloy_sol_types::sol;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
-sol! {
-    /// The public values encoded as a struct that can be easily deserialized inside Solidity.
-    struct PublicValuesStruct {
-        uint32 n;
-        uint32 a;
-        uint32 b;
-    }
-}
+
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OrderData {
