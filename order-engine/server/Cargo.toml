@@ -4,3 +4,11 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+juniper = "0.16.1"
+fibonacci-lib = { path = "../lib" }
+serde = "1.0.219"
+tokio = "1.45.1"
+tower = "0.5.2"
+axum = "0.8.4"
+sp1-sdk = "5.0.6"
+
