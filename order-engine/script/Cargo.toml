@@ -26,6 +26,7 @@ hex = "0.4.3"
 alloy-sol-types = { workspace = true }
 fibonacci-lib = { path = "../lib" }
 dotenv = "0.15.0"
+sha2 = "0.10.9"
 
 [build-dependencies]
 sp1-build = "5.0.0"

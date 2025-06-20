@@ -1424,6 +1424,8 @@ name = "fibonacci-lib"
 version = "0.1.0"
 dependencies = [
  "alloy-sol-types",
+ "serde",
+ "sha2",
 ]
 
 [[package]]
@@ -1448,6 +1450,7 @@ dependencies = [
  "hex",
  "serde",
  "serde_json",
+ "sha2",
  "sp1-build",
  "sp1-sdk",
  "tracing",
