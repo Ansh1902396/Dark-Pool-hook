@@ -42,4 +42,12 @@ interface IOrderServiceManager {
         uint32 referenceTaskIndex,
         address operator
     ) external;
+
+    function createNewTask(
+        bool zeroForOne,
+        int256 amountSpecified,
+        uint160 sqrtPriceLimitX96,
+        address sender,
+        bytes32 poolId
+    ) external returns (Task memory task);
 }

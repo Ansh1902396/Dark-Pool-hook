@@ -120,8 +120,8 @@ contract OrderServiceManager is ECDSAServiceManagerBase, IOrderServiceManager {
         uint160 sqrtPriceLimitX96,
         address sender,
         bytes32 poolId
-    ) external onlyHook {
-        Task memory task = Task({
+    ) external onlyHook returns (Task memory task){
+        task = Task({
             zeroForOne: zeroForOne,
             amountSpecified: amountSpecified,
             sqrtPriceLimitX96: sqrtPriceLimitX96,
