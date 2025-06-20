@@ -20,3 +20,11 @@ pub fn fibonacci(n: u32) -> (u32, u32) {
     }
     (a, b)
 }
+
+pub fn compute_order_hash() -> () {
+    unimplemented!()
+}
+
+pub fn compute_nullifier_hash() -> () {
+    unimplemented!()
+}
