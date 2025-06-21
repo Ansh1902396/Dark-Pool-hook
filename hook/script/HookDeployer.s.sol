@@ -12,9 +12,12 @@ import {Currency, CurrencyLibrary} from "v4-core/types/Currency.sol";
 import {V4Quoter} from "v4-periphery/src/lens/V4Quoter.sol";
 import {TickMath} from "v4-core/libraries/TickMath.sol";
 
+
+import {OrderServiceManager} from "../../avs/src/OrderServiceManager.sol";
 import {DarkCoWHook} from "../src/DarkCoWHook.sol";
 import {HookMiner} from "v4-periphery/src/utils/HookMiner.sol";
 import {ModifyLiquidityParams, SwapParams} from "v4-core/types/PoolOperation.sol";
+
 
 import "forge-std/Script.sol";
 import "forge-std/console.sol";
@@ -37,7 +40,7 @@ contract HookDeployer is Script, StdCheats {
     uint160 constant SQRT_PRICE_1_80 = 707906546557329983810457536050;    // 1:80 ratio
     uint160 constant SQRT_PRICE_1_25 = 395742478843881893883567226157;    // 1:25 ratio
     
-    address serviceManager=0xf5059a5D33d5853360D16C683c16e67980206f36;
+    // address serviceManager=0x5eb3bc0a489c5a8288765d2336659ebca68fcd00;
 
 
     function run() public {
@@ -103,7 +106,7 @@ contract HookDeployer is Script, StdCheats {
         string memory outputFilePath = string.concat(
             outputDir,
             chainDir,
-            "unicow_hook_deployment_output",
+            "darkCoWHook",
             ".json"
         );
         vm.writeJson(final_json, outputFilePath);
@@ -155,6 +158,9 @@ contract HookDeployer is Script, StdCheats {
         );
         hook = new DarkCoWHook{salt: salt}(manager, serviceManager);
         require(address(hook) == hookAddress, "hook: hook address mismatch");
+        
+        // Set the hook address in the service manager
+        // OrderServiceManager(serviceManager).setHook(address(hook));
     }
 
     function initPoolAndAddLiquidity() internal {

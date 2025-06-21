@@ -19,3 +19,5 @@ solmate/=lib/v4-periphery/lib/v4-core/lib/solmate/
 v4-core/=lib/v4-periphery/lib/v4-core/src/
 v4-periphery/=lib/v4-periphery/
 zeus-templates/=lib/eigenlayer-contracts/lib/zeus-templates/src/
+eigenlayer-contracts/=lib/eigenlayer-middleware/lib/eigenlayer-contracts/
+eigenlayer-middleware/=lib/eigenlayer-middleware/

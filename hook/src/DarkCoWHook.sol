@@ -16,14 +16,24 @@ import {SwapParams} from "v4-core/types/PoolOperation.sol";
 import "forge-std/console.sol";
 
 
-interface IServiceManager {
+interface IOrderServiceManager {
+    struct Task {
+        bool zeroForOne;
+        int256 amountSpecified;
+        uint160 sqrtPriceLimitX96;
+        address sender;
+        bytes32 poolId;
+        uint32 taskCreatedBlock;
+        uint32 taskId;
+    }
+    
     function createNewTask(
         bool zeroForOne,
         int256 amountSpecified,
         uint160 sqrtPriceLimitX96,
         address sender,
         bytes32 poolId
-    ) external;
+    ) external returns (Task memory task);
 }
 
 contract DarkCoWHook is BaseHook{
@@ -141,7 +151,7 @@ contract DarkCoWHook is BaseHook{
         );
 
 
-        IServiceManager(serviceManager).createNewTask(
+        IOrderServiceManager(serviceManager).createNewTask(
             swapParams.zeroForOne,
             swapParams.amountSpecified,
             swapParams.sqrtPriceLimitX96,
