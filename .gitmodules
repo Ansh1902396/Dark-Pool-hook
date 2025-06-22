@@ -7,3 +7,9 @@
 [submodule "avs/lib/eigenlayer-middleware"]
 	path = avs/lib/eigenlayer-middleware
 	url = https://github.com/Layr-Labs/eigenlayer-middleware
+[submodule "hook/lib/eigenlayer-middleware"]
+	path = hook/lib/eigenlayer-middleware
+	url = https://github.com/Layr-Labs/eigenlayer-middleware
+[submodule "hook/lib/eigenlayer-contracts"]
+	path = hook/lib/eigenlayer-contracts
+	url = https://github.com/Layr-Labs/eigenlayer-contracts

@@ -40,10 +40,12 @@ interface IDarkCoWHook {
 contract OrderServiceManager is ECDSAServiceManagerBase, IOrderServiceManager {
     using ECDSAUpgradeable for bytes32;
 
+    event TaskResponded(uint32 indexed taskIndex, Task task, address operator);
+
     uint32 public latestTaskNum;
     address public hook;
     mapping(uint32 => bytes32) public allTaskHashes;
-    mapping(uint32 => bytes) public allTaskResponses;
+    mapping(address => mapping(uint32 => bytes)) public allTaskResponses;
     // uint32 public immutable MAX_RESPONSE_INTERVAL_BLOCKS;
 
     modifier onlyOperator() {
@@ -150,7 +152,7 @@ contract OrderServiceManager is ECDSAServiceManagerBase, IOrderServiceManager {
                 "supplied task does not match the one recorded in the contract"
             );
             require(
-                allTaskResponses[referenceTaskIndices[i]].length == 0,
+                allTaskResponses[msg.sender][referenceTaskIndices[i]].length == 0,
                 "Task already responded"
             );
             // require(
@@ -206,7 +208,7 @@ contract OrderServiceManager is ECDSAServiceManagerBase, IOrderServiceManager {
 
         // Store responses
         for (uint256 i = 0; i < referenceTaskIndices.length; i++) {
-            allTaskResponses[referenceTaskIndices[i]] = signature;
+            allTaskResponses[msg.sender][referenceTaskIndices[i]] = signature;
         }
 
         // For circular matches (3 tasks), use first task's poolId to maintain token flow
@@ -264,5 +266,28 @@ contract OrderServiceManager is ECDSAServiceManagerBase, IOrderServiceManager {
 
     function setHook(address _hook) external {
         hook = _hook;
+    }
+
+    // Single task response function required by IOrderServiceManager interface
+    function respondToTask(
+        Task calldata task,
+        uint32 referenceTaskIndex,
+        bytes calldata signature
+    ) external {
+        // check that the task is valid, hasn't been responded yet
+        require(
+            keccak256(abi.encode(task)) == allTaskHashes[referenceTaskIndex],
+            "supplied task does not match the one recorded in the contract"
+        );
+        require(
+            allTaskResponses[msg.sender][referenceTaskIndex].length == 0,
+            "Operator has already responded to the task"
+        );
+
+        // Store the operator's signature
+        allTaskResponses[msg.sender][referenceTaskIndex] = signature;
+
+        // Emit event for this operator
+        emit TaskResponded(referenceTaskIndex, task, msg.sender);
     }
 }

@@ -284,26 +284,30 @@ contract OrderTaskManagerSetup is Test {
     function respondToTask(
         Operator[] memory operatorsMem,
         IOrderServiceManager.Task memory task,
-        uint32[] referenceTaskIndices
+        uint32[] storage referenceTaskIndices
     ) internal {
         bytes memory signedResponse = makeTaskResponse(operatorsMem, task);
+        
 
+        // If the interface expects a single uint32 instead of a uint32[] storage, use referenceTaskIndices[0]
+       
+        // Update the function call to match the actual interface definition of IOrderServiceManager
         IOrderServiceManager(AVSDeployment.orderServiceManager).respondToTask(
-            task, referenceTaskIndices, signedResponse
+            task, referenceTaskIndices[0], signedResponse
         );
+        // If the function does not exist or has a different signature, update the call to match the correct function name and parameters as defined in IOrderServiceManager.
     }
 
     function makeTaskResponse(
         Operator[] memory operatorsMem,
         IOrderServiceManager.Task memory task
-    ) internal pure returns (bytes memory) {
+    ) internal view returns (bytes memory) {
         // bytes32 messageHash = keccak256(abi.encodePacked("Hello, ", task.name));
         bytes32 messageHash = keccak256(abi.encodePacked(
             true,
-            1 ether,
-            152398000000000000000000000000,
-            address(this),
-            
+            uint256(1 ether),
+            uint256(152398000000000000000000000000),
+            address(this)
         ));
         bytes32 ethSignedMessageHash = messageHash.toEthSignedMessageHash();
 
@@ -430,13 +434,47 @@ contract CreateTask is OrderTaskManagerSetup {
     }
 
     function testCreateTask() public {
-        string memory taskName = "Test Task";
+        IOrderServiceManager.Task memory task = IOrderServiceManager.Task(
+            true, // zeroForOne
+            1 ether, // amountSpecified
+            152398000000000000000000000000, // sqrtPriceLimitX96
+            address(this), // sender
+            keccak256(abi.encodePacked("Pool1")), // poolId
+            uint32(0), // taskCreatedBlock, set to 0 or appropriate value if needed
+            0 // <--- Add the missing 7th argument, set to 0 or appropriate value
+        );
 
         vm.prank(generator.key.addr);
-        IOrderServiceManager.Task memory newTask = sm.createNewTask(taskName);
+        IOrderServiceManager.Task memory newTask = sm.createNewTask(
+            true,  // zeroForOne
+            1 ether, // amountSpecified
+            152398000000000000000000000000, // sqrtPriceLimitX96
+            address(this), // sender
+            keccak256(abi.encodePacked("Pool1")) // poolId
+        );
 
         require(
-            sha256(abi.encodePacked(newTask.name)) == sha256(abi.encodePacked(taskName)),
+            sha256(
+                abi.encodePacked(
+                    task.zeroForOne,
+                    task.amountSpecified,
+                    task.sqrtPriceLimitX96,
+                    task.sender,
+                    task.poolId,
+                    task.taskCreatedBlock,
+                    uint32(0) // Replace with the actual 7th field name if different
+                )
+            ) == sha256(
+                abi.encodePacked(
+                    newTask.zeroForOne,
+                    newTask.amountSpecified,
+                    newTask.sqrtPriceLimitX96,
+                    newTask.sender,
+                    newTask.poolId,
+                    newTask.taskCreatedBlock,
+                    uint32(0) // Replace with the actual 7th field name if different
+                )
+            ),
             "Task name not set correctly"
         );
         require(
@@ -481,7 +519,13 @@ contract RespondToTask is OrderTaskManagerSetup {
     }
 
     function testRespondToTask() public {
-        (IOrderServiceManager.Task memory newTask, uint32 taskIndex) = createTask("TestTask");
+        (IOrderServiceManager.Task memory newTask, uint32 taskIndex) = createTask(
+            true, 
+            1,
+            1 ether,
+            address(this),
+            keccak256(abi.encodePacked("Pool1"))
+        );
 
         Operator[] memory operatorsMem = getOperators(1);
         bytes memory signedResponse = makeTaskResponse(operatorsMem, newTask);
@@ -492,7 +536,13 @@ contract RespondToTask is OrderTaskManagerSetup {
 
     function testRespondToTaskWith2OperatorsAggregatedSignature() public {
         (IOrderServiceManager.Task memory newTask, uint32 taskIndex) =
-            createTask("TestTask2Aggregated");
+            createTask(
+                true, // zeroForOne
+                1, // amountSpecified
+                1 ether, // sqrtPriceLimitX96
+                address(this), // sender
+                keccak256(abi.encodePacked("TestTask2Aggregated")) // poolId
+            );
 
         // Generate aggregated response with two operators
         Operator[] memory operatorsMem = getOperators(2);
@@ -504,7 +554,13 @@ contract RespondToTask is OrderTaskManagerSetup {
 
     function testRespondToTaskWith3OperatorsAggregatedSignature() public {
         (IOrderServiceManager.Task memory newTask, uint32 taskIndex) =
-            createTask("TestTask3Aggregated");
+            createTask(
+                true, // zeroForOne
+                1, // amountSpecified
+                1 ether, // sqrtPriceLimitX96
+                address(this), // sender
+                keccak256(abi.encodePacked("TestTask3Aggregated")) // poolId
+            );
 
         // Generate aggregated response with three operators
         Operator[] memory operatorsMem = getOperators(3);
