@@ -94,6 +94,11 @@ contract OrderTaskManagerSetup is Test {
         AVSDeployment.strategy = address(strategy);
         AVSDeployment.token = address(mockToken);
         labelContracts(coreDeployment, AVSDeployment);
+        
+        // Set the hook address to the generator for testing purposes
+        // Make sure to set it on the proxy contract, not the implementation
+        vm.prank(owner.key.addr); // Use owner since setHook might have access control
+        OrderServiceManager(AVSDeployment.orderServiceManager).setHook(generator.key.addr);
     }
 
     function addStrategy(
@@ -269,7 +274,7 @@ contract OrderTaskManagerSetup is Test {
         IOrderServiceManager orderServiceManager =
             IOrderServiceManager(AVSDeployment.orderServiceManager);
 
-        vm.prank(generator.key.addr);
+        vm.startPrank(generator.key.addr);
         taskIndex = orderServiceManager.latestTaskNum();
         task = orderServiceManager.createNewTask(
             zeroForOne,
@@ -278,6 +283,7 @@ contract OrderTaskManagerSetup is Test {
             sender,
             poolId
         );
+        vm.stopPrank();
         return (task, taskIndex);
     }
 
@@ -434,16 +440,6 @@ contract CreateTask is OrderTaskManagerSetup {
     }
 
     function testCreateTask() public {
-        IOrderServiceManager.Task memory task = IOrderServiceManager.Task(
-            true, // zeroForOne
-            1 ether, // amountSpecified
-            152398000000000000000000000000, // sqrtPriceLimitX96
-            address(this), // sender
-            keccak256(abi.encodePacked("Pool1")), // poolId
-            uint32(0), // taskCreatedBlock, set to 0 or appropriate value if needed
-            0 // <--- Add the missing 7th argument, set to 0 or appropriate value
-        );
-
         vm.prank(generator.key.addr);
         IOrderServiceManager.Task memory newTask = sm.createNewTask(
             true,  // zeroForOne
@@ -453,33 +449,14 @@ contract CreateTask is OrderTaskManagerSetup {
             keccak256(abi.encodePacked("Pool1")) // poolId
         );
 
-        require(
-            sha256(
-                abi.encodePacked(
-                    task.zeroForOne,
-                    task.amountSpecified,
-                    task.sqrtPriceLimitX96,
-                    task.sender,
-                    task.poolId,
-                    task.taskCreatedBlock,
-                    uint32(0) // Replace with the actual 7th field name if different
-                )
-            ) == sha256(
-                abi.encodePacked(
-                    newTask.zeroForOne,
-                    newTask.amountSpecified,
-                    newTask.sqrtPriceLimitX96,
-                    newTask.sender,
-                    newTask.poolId,
-                    newTask.taskCreatedBlock,
-                    uint32(0) // Replace with the actual 7th field name if different
-                )
-            ),
-            "Task name not set correctly"
-        );
-        require(
-            newTask.taskCreatedBlock == uint32(block.number), "Task created block not set correctly"
-        );
+        // Verify task fields individually
+        assertEq(newTask.zeroForOne, true, "zeroForOne not set correctly");
+        assertEq(newTask.amountSpecified, 1 ether, "amountSpecified not set correctly");
+        assertEq(newTask.sqrtPriceLimitX96, 152398000000000000000000000000, "sqrtPriceLimitX96 not set correctly");
+        assertEq(newTask.sender, address(this), "sender not set correctly");
+        assertEq(newTask.poolId, keccak256(abi.encodePacked("Pool1")), "poolId not set correctly");
+        assertEq(newTask.taskCreatedBlock, uint32(block.number), "Task created block not set correctly");
+        assertEq(newTask.taskId, 0, "Task ID should be 0 for first task");
     }
 }
 
@@ -531,6 +508,7 @@ contract RespondToTask is OrderTaskManagerSetup {
         bytes memory signedResponse = makeTaskResponse(operatorsMem, newTask);
 
         vm.roll(block.number + 1);
+        vm.prank(generator.key.addr);
         sm.respondToTask(newTask, taskIndex, signedResponse);
     }
 
@@ -549,6 +527,7 @@ contract RespondToTask is OrderTaskManagerSetup {
         bytes memory signedResponse = makeTaskResponse(operatorsMem, newTask);
 
         vm.roll(block.number + 1);
+        vm.prank(generator.key.addr);
         sm.respondToTask(newTask, taskIndex, signedResponse);
     }
 
@@ -567,7 +546,14 @@ contract RespondToTask is OrderTaskManagerSetup {
         bytes memory signedResponse = makeTaskResponse(operatorsMem, newTask);
 
         vm.roll(block.number + 1);
+        vm.prank(generator.key.addr);
         sm.respondToTask(newTask, taskIndex, signedResponse);
+    }
+
+    function testHookSetup() public view {
+        // Verify that the hook is properly set
+        address currentHook = OrderServiceManager(AVSDeployment.orderServiceManager).getHook();
+        assertEq(currentHook, generator.key.addr, "Hook should be set to generator address");
     }
 }
 

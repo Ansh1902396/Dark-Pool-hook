@@ -268,6 +268,10 @@ contract OrderServiceManager is ECDSAServiceManagerBase, IOrderServiceManager {
         hook = _hook;
     }
 
+    function getHook() external view returns (address) {
+        return hook;
+    }
+
     // Single task response function required by IOrderServiceManager interface
     function respondToTask(
         Task calldata task,
