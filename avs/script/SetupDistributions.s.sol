@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import {Script} from "forge-std/Script.sol";
-import {HelloWorldDeploymentLib} from "./utils/HelloWorldDeploymentLib.sol";
+import {AVSDeploymentLib} from "./utils/AVSDeploymentLib.sol";
 import {CoreDeployLib, CoreDeploymentParsingLib} from "./utils/CoreDeploymentParsingLib.sol";
 import {SetupDistributionsLib} from "./utils/SetupDistributionsLib.sol";
 import {IRewardsCoordinator} from "@eigenlayer/contracts/interfaces/IRewardsCoordinator.sol";
@@ -27,8 +27,8 @@ contract SetupDistributions is Script, Test {
     CoreDeployLib.DeploymentData coreDeployment;
     CoreDeployLib.DeploymentConfigData coreConfig;
 
-    HelloWorldDeploymentLib.DeploymentData helloWorldDeployment;
-    HelloWorldDeploymentLib.DeploymentConfigData helloWorldConfig;
+    AVSDeploymentLib.DeploymentData avsDeployment;
+    AVSDeploymentLib.DeploymentConfigData avsConfig;
 
     RewardsCoordinator rewardsCoordinator;
     string internal constant paymentInfofilePath = "test/mockData/scratch/payment_info.json";
@@ -65,8 +65,8 @@ contract SetupDistributions is Script, Test {
             CoreDeploymentParsingLib.readDeploymentJson("deployments/core/", block.chainid);
         coreConfig =
             CoreDeploymentParsingLib.readDeploymentConfigValues("config/core/", block.chainid);
-        helloWorldDeployment =
-            HelloWorldDeploymentLib.readDeploymentJson("deployments/hello-world/", block.chainid);
+        avsDeployment =
+            AVSDeploymentLib.readDeploymentJson("deployments/avs/", block.chainid);
         helloWorldConfig =
             HelloWorldDeploymentLib.readDeploymentConfigValues("config/hello-world/", block.chainid);
 

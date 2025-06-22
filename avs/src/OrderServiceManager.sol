@@ -9,7 +9,7 @@ import {ECDSAUpgradeable} from
     "@openzeppelin-upgrades/contracts/utils/cryptography/ECDSAUpgradeable.sol";
 import {IERC1271Upgradeable} from
     "@openzeppelin-upgrades/contracts/interfaces/IERC1271Upgradeable.sol";
-import {IHelloWorldServiceManager} from "./IHelloWorldServiceManager.sol";
+import {IOrderServiceManager} from "./IOrderServiceManager.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@eigenlayer/contracts/interfaces/IRewardsCoordinator.sol";
 import {IAllocationManager} from "@eigenlayer/contracts/interfaces/IAllocationManager.sol";
@@ -17,7 +17,7 @@ import {TransparentUpgradeableProxy} from
     "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 
 
-interface IDarkCowHook {
+interface IDarkCoWHook {
     struct TransferBalance {
         uint256 amount;
         address currency;
@@ -37,41 +37,14 @@ interface IDarkCowHook {
     ) external;
 }
 
-contract HelloWorldServiceManager is ECDSAServiceManagerBase, IOrderServiceManager {
+contract OrderServiceManager is ECDSAServiceManagerBase, IOrderServiceManager {
     using ECDSAUpgradeable for bytes32;
 
-    struct Task {
-        bool zeroForOne;
-        int256 amountSpecified;
-        uint160 sqrtPriceLimitX96;
-        address sender;
-        bytes32 poolId;
-        uint32 taskCreatedBlock;
-        uint32 taskId;
-    }
-
     uint32 public latestTaskNum;
-
-    // mapping of task indices to all tasks hashes
-    // when a task is created, task hash is stored here,
-    // and responses need to pass the actual task,
-    // which is hashed onchain and checked against this mapping
+    address public hook;
     mapping(uint32 => bytes32) public allTaskHashes;
-
-    // mapping of task indices to hash of abi.encode(taskResponse, taskResponseMetadata)
-    mapping(address => mapping(uint32 => bytes)) public allTaskResponses;
-
-    // mapping of task indices to task status (true if task has been responded to, false otherwise)
-    // TODO: use bitmap?
-    mapping(uint32 => bool) public taskWasResponded;
-
-    // max interval in blocks for responding to a task
-    // operators can be penalized if they don't respond in time
-    // Or better the operators can cancell there current task of matching and do a Limit Order instead 
-    uint32 public immutable MAX_RESPONSE_INTERVAL_BLOCKS;
-
-    event NewTaskCreated(uint32 indexed taskIndex, Task task);
-    event BatchResponse(uint32[] indexed referenceTaskIndices, address sender);
+    mapping(uint32 => bytes) public allTaskResponses;
+    // uint32 public immutable MAX_RESPONSE_INTERVAL_BLOCKS;
 
     modifier onlyOperator() {
         require(
@@ -102,7 +75,7 @@ contract HelloWorldServiceManager is ECDSAServiceManagerBase, IOrderServiceManag
             _allocationManager
         )
     {
-        MAX_RESPONSE_INTERVAL_BLOCKS = _maxResponseIntervalBlocks;
+        // MAX_RESPONSE_INTERVAL_BLOCKS = _maxResponseIntervalBlocks;
     }
 
     function initialize(address initialOwner, address _rewardsInitiator) external initializer {
@@ -147,8 +120,8 @@ contract HelloWorldServiceManager is ECDSAServiceManagerBase, IOrderServiceManag
         uint160 sqrtPriceLimitX96,
         address sender,
         bytes32 poolId
-    ) external onlyHook {
-        Task memory task = Task({
+    ) external onlyHook returns (Task memory task){
+        task = Task({
             zeroForOne: zeroForOne,
             amountSpecified: amountSpecified,
             sqrtPriceLimitX96: sqrtPriceLimitX96,
@@ -162,58 +135,100 @@ contract HelloWorldServiceManager is ECDSAServiceManagerBase, IOrderServiceManag
         latestTaskNum++;
     }
 
-    function respondToTask(
-        Task calldata task,
-        uint32 referenceTaskIndex,
+    //operators to respond to tasks, batch of orders (order = a single a task)
+    function respondToBatch(
+        Task[] calldata tasks,
+        uint32[] memory referenceTaskIndices,
+        IDarkCoWHook.TransferBalance[] memory transferBalances,
+        IDarkCoWHook.SwapBalance[] memory swapBalances,
         bytes memory signature
     ) external {
         // check that the task is valid, hasn't been responded yet, and is being responded in time
-        require(
-            keccak256(abi.encode(task)) == allTaskHashes[referenceTaskIndex],
-            "supplied task does not match the one recorded in the contract"
-        );
-        require(
-            block.number <= task.taskCreatedBlock + MAX_RESPONSE_INTERVAL_BLOCKS,
-            "Task response time has already expired"
-        );
-
-        // The message that was signed
-        bytes32 messageHash = keccak256(abi.encodePacked("Hello, ", task.name));
-        bytes32 ethSignedMessageHash = messageHash.toEthSignedMessageHash();
-        bytes4 magicValue = IERC1271Upgradeable.isValidSignature.selector;
-
-        // Decode the signature data to get operators and their signatures
-        (address[] memory operators, bytes[] memory signatures, uint32 referenceBlock) =
-            abi.decode(signature, (address[], bytes[], uint32));
-
-        // Check that referenceBlock matches task creation block
-        require(
-            referenceBlock == task.taskCreatedBlock,
-            "Reference block must match task creation block"
-        );
-
-        // Store each operator's signature
-        for (uint256 i = 0; i < operators.length; i++) {
-            // Check that this operator hasn't already responded
+        for(uint256 i = 0;i<referenceTaskIndices.length; i++){
             require(
-                allTaskResponses[operators[i]][referenceTaskIndex].length == 0,
-                "Operator has already responded to the task"
+                keccak256(abi.encode(tasks[i])) == allTaskHashes[referenceTaskIndices[i]],
+                "supplied task does not match the one recorded in the contract"
             );
-
-            // Store the operator's signature
-            allTaskResponses[operators[i]][referenceTaskIndex] = signatures[i];
-
-            // Emit event for this operator
-            emit TaskResponded(referenceTaskIndex, task, operators[i]);
+            require(
+                allTaskResponses[referenceTaskIndices[i]].length == 0,
+                "Task already responded"
+            );
+            // require(
+            //     block.number <= task.taskCreatedBlock + MAX_RESPONSE_INTERVAL_BLOCKS,
+            //     "Task response time has already expired"
+            // );
         }
 
-        taskWasResponded[referenceTaskIndex] = true;
+        // The message that was signed
+        bytes32 messageHash = getMessageHash(tasks[0].poolId, transferBalances, swapBalances);
 
-        // Verify all signatures at once
-        bytes4 isValidSignatureResult =
-            ECDSAStakeRegistry(stakeRegistry).isValidSignature(ethSignedMessageHash, signature);
 
-        require(magicValue == isValidSignatureResult, "Invalid signature");
+        // // Code to review  
+        // bytes32 ethSignedMessageHash = messageHash.toEthSignedMessageHash();
+        // bytes4 magicValue = IERC1271Upgradeable.isValidSignature.selector;
+
+        // // Decode the signature data to get operators and their signatures
+        // (address[] memory operators, bytes[] memory signatures, uint32[] referenceBlocks) =
+        //     abi.decode(signature, (address[], bytes[], uint32));
+
+        // // Check that referenceBlock matches task creation block
+        // require(
+        //     referenceBlock == task.taskCreatedBlock,
+        //     "Reference block must match task creation block"
+        // );
+
+         // Verify all signatures at once if using the staking part
+        // bytes4 isValidSignatureResult =
+        //     ECDSAStakeRegistry(stakeRegistry).isValidSignature(ethSignedMessageHash, signature);
+
+        // require(magicValue == isValidSignatureResult, "Invalid signature");
+
+        address signer = ECDSAUpgradeable.recover(messageHash, signature);
+        require(signer == msg.sender, "Invalid signature");
+
+
+        // Store each operator's signature
+        // for (uint256 i = 0; i < operators.length; i++) {
+        //     // Check that this operator hasn't already responded
+        //     require(
+        //         allTaskResponses[operators[i]][referenceTaskIndex].length == 0,
+        //         "Operator has already responded to the task"
+        //     );
+
+        //     // Store the operator's signature
+        //     allTaskResponses[operators[i]][referenceTaskIndex] = signatures[i];
+
+        //     // Emit event for this operator
+        //     emit TaskResponded(referenceTaskIndex, task, operators[i]);
+        // }
+
+        // taskWasResponded[referenceTaskIndex] = true;
+
+        // Store responses
+        for (uint256 i = 0; i < referenceTaskIndices.length; i++) {
+            allTaskResponses[referenceTaskIndices[i]] = signature;
+        }
+
+        // For circular matches (3 tasks), use first task's poolId to maintain token flow
+        bytes32 poolIdToUse = tasks[0].poolId;
+        
+        // Settle all balances in one call
+        IDarkCoWHook(hook).settleBalances(
+            poolIdToUse,
+            transferBalances,
+            swapBalances
+        );
+
+        emit BatchResponse(referenceTaskIndices, msg.sender);
+
+    }
+
+    function getMessageHash(
+        bytes32 poolId,
+        IDarkCoWHook.TransferBalance[] memory transferBalances,
+        IDarkCoWHook.SwapBalance[] memory swapBalances
+    ) public pure returns (bytes32) {
+        return keccak256(abi.encode(poolId, transferBalances, swapBalances));
     }
 
     function slashOperator(
@@ -245,5 +260,9 @@ contract HelloWorldServiceManager is ECDSAServiceManagerBase, IOrderServiceManag
         // allTaskResponses[operator][referenceTaskIndex] = "slashed";
 
         // // TODO: slash operator
+    }
+
+    function setHook(address _hook) external {
+        hook = _hook;
     }
 }

@@ -1455,6 +1455,7 @@ version = "0.1.0"
 dependencies = [
  "alloy-sol-types",
  "fibonacci-lib",
+ "k256",
  "serde",
  "sha2",
  "sp1-zkvm",
