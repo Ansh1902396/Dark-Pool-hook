@@ -4,11 +4,23 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-juniper = "0.16.1"
-fibonacci-lib = { path = "../lib" }
-serde = "1.0.219"
-tokio = "1.45.1"
-tower = "0.5.2"
-axum = "0.8.4"
-sp1-sdk = "5.0.6"
+axum           = "0.7"
+tokio          = { version = "1", features = ["full"] }
+serde          = { version = "1", features = ["derive"] }
+serde_json     = "1"
+base64         = "0.22"
+hex            = "0.4"            # ★ decode 0x-prefixed hex
+once_cell      = "1"
+anyhow         = "1"
+tracing = "0.1.40"
 
+
+# Succinct SP1 SDK
+sp1-sdk = "5.0.0"
+
+# Fibonacci lib
+fibonacci-lib = { path = "../lib" }
+bincode = "2.0.1"
+
+[build-dependencies]
+sp1-build = "5.0.0"
