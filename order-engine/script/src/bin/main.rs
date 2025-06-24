@@ -481,6 +481,71 @@ fn run_sp1_nullifier_test() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
+fn run_sp1_nullifier_prove() -> Result<(), Box<dyn Error>> {
+    println!("\n🔬 SP1 NULLIFIER PROVE");
+    println!("═══════════════════════");
+
+    let client = ProverClient::from_env();
+
+    let (pk, vk) = client.setup(FIBONACCI_ELF);
+
+
+
+    // Create test data
+    let alice_secret = [1u8; 32];
+    let alice_order = OrderData {
+        wallet_address: [1u8; 20],
+        token_in: [0xAu8; 20],
+        token_out: [0xBu8; 20],
+        amount_in: 5000000000000000000u64,
+        min_amount_out: 10000000000u64,
+        target_price: 2000000000u64,
+        deadline: 1735689600u64,
+    };
+
+    let market_conditions = MarketConditions {
+        current_price: 2050000000u64,
+        block_timestamp: 1735600000u64,
+    };
+
+    let alice_balance = 10000000000000000000u64;
+    let order_context = hash_order(&alice_order);
+
+    let (alice_commitment, alice_nullifier) =
+        create_order_commitment(&alice_order, &alice_secret, alice_balance, &order_context);
+
+    // Build tree with Alice's commitment
+    let mut tree = CommitmentMerkleTree::new();
+    tree.add_commitment(alice_nullifier.commitment_hash, "Alice".to_string());
+
+    let (tree_root, _) = tree.build_tree();
+    let (siblings, indices) = tree.generate_proof(alice_nullifier.commitment_hash)?;
+
+    println!("  Order: 5 ETH → USDC at $2000 target");
+    println!("  Market: $2050 (favorable)");
+    println!("  Balance: 10 ETH (sufficient)");
+
+    // Setup SP1 inputs
+    let mut stdin = SP1Stdin::new();
+
+    // Public inputs
+    stdin.write(&market_conditions);
+    stdin.write(&tree_root);
+    stdin.write(&alice_nullifier.nullifier_hash);
+
+    // Private inputs
+    stdin.write(&alice_order);
+    stdin.write(&alice_commitment.nullifier);
+    stdin.write(&alice_balance);
+    stdin.write(&siblings);
+    stdin.write(&indices);
+
+    let mut proof = client.prove(&pk, &stdin).groth16().run()?;
+
+    println!("    Proof: {:?}", proof);
+    Ok(())
+}
+
 fn main() -> Result<(), Box<dyn Error>> {
     sp1_sdk::utils::setup_logger();
     dotenv::dotenv().ok();
@@ -501,6 +566,10 @@ fn main() -> Result<(), Box<dyn Error>> {
             demonstrate_nullifier_flow()?;
             if args.execute {
                 run_sp1_nullifier_test()?;
+            }
+
+            if args.prove {
+                run_sp1_nullifier_prove()?;
             }
         }
         _ => {

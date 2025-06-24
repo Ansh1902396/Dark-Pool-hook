@@ -160,7 +160,7 @@ async fn prove_handler(
     let mut proof = state
         .client
         .prove(&state.pk, &stdin)
-        .plonk()
+        .groth16()
         .run()
         .map_err(to_500)?;
 
