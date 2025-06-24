@@ -128,7 +128,7 @@ library AVSDeploymentLib {
     function writeDeploymentJson(
         DeploymentData memory data
     ) internal {
-        writeDeploymentJson("deployments/hello-world/", block.chainid, data);
+        writeDeploymentJson("deployments/avs/", block.chainid, data);
     }
 
     function writeDeploymentJson(

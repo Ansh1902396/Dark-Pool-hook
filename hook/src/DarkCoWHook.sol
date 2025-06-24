@@ -265,6 +265,8 @@ contract DarkCoWHook is BaseHook{
         );
     }
 
+    //function if the order was cross chain then, 
+
     function getPoolSlot0(
         bytes32 poolId
     )

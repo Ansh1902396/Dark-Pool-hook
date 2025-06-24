@@ -115,7 +115,7 @@ const hookDeploymentData = JSON.parse(fs.readFileSync(path.resolve(__dirname, `.
 
 const delegationManagerAddress = coreDeploymentData.addresses.delegationManager; // todo: reminder to fix the naming of this contract in the deployment file, change to delegationManager
 const avsDirectoryAddress = coreDeploymentData.addresses.avsDirectory;
-const avsServiceManagerAddress = avsDeploymentData.addresses.avsServiceManager;
+const avsServiceManagerAddress = avsDeploymentData.addresses.orderServiceManager;
 const ecdsaStakeRegistryAddress = avsDeploymentData.addresses.stakeRegistry;
 const hookAddr = hookDeploymentData.addresses.hook;
 const quoterAddr = hookDeploymentData.addresses.quoter;
