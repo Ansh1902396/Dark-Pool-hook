@@ -51,35 +51,21 @@ export const registerOperator = async () => {
     };
 
     // Calculate the digest hash, which is a unique value representing the operator, avs, unique value (salt) and expiration date.
-    // const operatorDigestHash = await avsDirectory.callStatic.calculateOperatorAVSRegistrationDigestHash(
-    //     wallet.address,
-    //     await serviceManager.getAddress(),
-    //     salt,
-    //     expiry
-    //   );
-    // console.log(operatorDigestHash);
 
-    const digest = await avsDirectory.calculateOperatorAVSRegistrationDigestHash(
+    const operatorDigestHash = await avsDirectory.calculateOperatorAVSRegistrationDigestHash(
         wallet.address,
         await serviceManager.getAddress(),
         salt,
         expiry
     );
-    console.log("Digest to sign:", digest);
+    console.log("Digest to sign:", operatorDigestHash);
 
 
     // // Sign the digest hash with the operator's private key
-    // console.log("Signing digest hash with operator's private key");
-    // const operatorSigningKey = new ethers.SigningKey(process.env.PRIVATE_KEY!);
-    // const operatorSignedDigestHash = operatorSigningKey.sign(digest);
+    console.log("Signing digest hash with operator's private key");
+    const operatorSigningKey = new ethers.SigningKey(process.env.PRIVATE_KEY!);
+    const operatorSignedDigestHash = operatorSigningKey.sign(operatorDigestHash);
 
-    const operatorSigningKey = new ethers.SigningKey(wallet.privateKey);  // No need to fetch from env again
-
-// Digest must be a 32-byte hex string
-const signature = operatorSigningKey.sign(digest);
-
-// Serialized signature (r, s, v)
-operatorSignatureWithSaltAndExpiry.signature = ethers.Signature.from(signature).serialized;
     // Encode the signature in the required format
     operatorSignatureWithSaltAndExpiry.signature = ethers.Signature.from(operatorSignedDigestHash).serialized;
 

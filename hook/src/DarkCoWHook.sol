@@ -188,12 +188,15 @@ contract DarkCoWHook is BaseHook{
             console.log("Hook Balance of currency", hookBalanceOfCurrency);
             console.log("Burning amount", amount);
 
+
+            // Burn the ERC6909 the hook has
             poolManager.burn(
                 address(this),
                 Currency.wrap(transferBalances[i].currency).toId(),
                 amount
             );
 
+            // And take the 
             poolManager.take(
                 Currency.wrap(transferBalances[i].currency),
                 transferBalances[i].sender,
