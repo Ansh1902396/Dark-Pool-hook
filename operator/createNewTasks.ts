@@ -1,54 +1,216 @@
 import { ethers } from "ethers";
 import * as dotenv from "dotenv";
-const fs = require('fs');
-const path = require('path');
+import {
+  createPublicClient,
+  createWalletClient,
+  encodeAbiParameters,
+  getContract,
+  http,
+  parseAbiParameters,
+  toHex,
+  parseEther,
+} from "viem";
+import { privateKeyToAccount } from "viem/accounts";
+import { anvil, holesky } from "viem/chains";
+import { SwapRouterABI } from "./abis_cp/SwapRouter";
+import { waitForTransactionReceipt } from "viem/actions";
+import { hookDeploymentData } from "./utils";
+import { PoolKey, encodePoolKeys } from "./utils";
 dotenv.config();
 
-// Setup env variables
-const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
-const wallet = new ethers.Wallet(process.env.PRIVATE_KEY!, provider);
-/// TODO: Hack
-let chainId = 31337;
+// Add pool configurations
+const POOL_CONFIGS = {
+  pool01: {
+    currency0: hookDeploymentData.addresses.token0,
+    currency1: hookDeploymentData.addresses.token1,
+    fee: 3000,
+    tickSpacing: 120,
+    hooks: hookDeploymentData.addresses.hook,
+  },
+  pool12: {
+    currency0: hookDeploymentData.addresses.token1,
+    currency1: hookDeploymentData.addresses.token2,
+    fee: 3000,
+    tickSpacing: 120,
+    hooks: hookDeploymentData.addresses.hook,
+  },
+  pool02: {
+    currency0: hookDeploymentData.addresses.token0,
+    currency1: hookDeploymentData.addresses.token2,
+    fee: 3000,
+    tickSpacing: 120,
+    hooks: hookDeploymentData.addresses.hook,
+  },
+} as const;
 
-const avsDeploymentData = JSON.parse(fs.readFileSync(path.resolve(__dirname, `../contracts/deployments/hello-world/${chainId}.json`), 'utf8'));
-const helloWorldServiceManagerAddress = avsDeploymentData.addresses.helloWorldServiceManager;
-const helloWorldServiceManagerABI = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../abis/HelloWorldServiceManager.json'), 'utf8'));
-// Initialize contract objects from ABIs
-const helloWorldServiceManager = new ethers.Contract(helloWorldServiceManagerAddress, helloWorldServiceManagerABI, wallet);
+type PoolConfig = typeof POOL_CONFIGS[keyof typeof POOL_CONFIGS];
+
+const account = privateKeyToAccount(process.env.PRIVATE_KEY! as `0x${string}`);
+
+const walletClient = createWalletClient({
+  chain: process.env.IS_DEV === "true" ? anvil : holesky,
+  transport: http(),
+  account,
+});
+
+const publicClient = createPublicClient({
+  chain: process.env.IS_DEV === "true" ? anvil : holesky,
+  transport: http(),
+});
+
+const swapRouter = getContract({
+  address: hookDeploymentData.addresses.swapRouter,
+  abi: SwapRouterABI,
+  client: {
+    public: publicClient,
+    wallet: walletClient,
+  },
+});
 
 
-// Function to generate random names
-function generateRandomName(): string {
-    const adjectives = ['Quick', 'Lazy', 'Sleepy', 'Noisy', 'Hungry'];
-    const nouns = ['Fox', 'Dog', 'Cat', 'Mouse', 'Bear'];
-    const adjective = adjectives[Math.floor(Math.random() * adjectives.length)];
-    const noun = nouns[Math.floor(Math.random() * nouns.length)];
-    const randomName = `${adjective}${noun}${Math.floor(Math.random() * 1000)}`;
-    return randomName;
-  }
+// Different test scenarios
+const TEST_SCENARIOS = {
+  // Scenario 1: Simple CoW match (2 tasks that can match)
+  cowMatch: [
+    {
+      zeroForOne: true,
+      amountSpecified: -parseEther("1"), // Sell 1 token0 for token1
+      sqrtPriceLimitX96: BigInt("152398000000000000000000000000"),
+    },
+    {
+      zeroForOne: false,
+      amountSpecified: -parseEther("1"), // Sell 1 token1 for token0
+      sqrtPriceLimitX96: BigInt("162369000000000000000000000000"),
+    }
+  ],
 
-async function createNewTask(taskName: string) {
-  try {
-    // Send a transaction to the createNewTask function
-    const tx = await helloWorldServiceManager.createNewTask(taskName);
+  // Scenario 2: Circular CoW (3 tasks that form a circle)
+  circularCow: [
+    {
+      zeroForOne: true,  // Task 1: token0 -> token1 in pool01
+      amountSpecified: -parseEther("1"),
+      sqrtPriceLimitX96: BigInt("152398000000000000000000000000"),
+    },
+    {
+      zeroForOne: true,  // Task 2: token1 -> token2 in pool12
+      amountSpecified: -parseEther("1"),
+      sqrtPriceLimitX96: BigInt("152398000000000000000000000000"),
+    },
+    {
+      zeroForOne: false, // Task 3: token2 -> token0 in pool02 (reverse direction)
+      amountSpecified: -parseEther("1"),
+      sqrtPriceLimitX96: BigInt("162369000000000000000000000000"),
+    }
+  ],
+
+  // Scenario 3: Mixed matching (3 circular + 2 direct + 1 AMM)
+  mixedMatching: [
+    // Circular match group (token0 -> token1 -> token2 -> token0)
+    {
+      zeroForOne: true,  // Task 1: token0 -> token1 in pool01
+      amountSpecified: -parseEther("1"),
+      sqrtPriceLimitX96: BigInt("152398000000000000000000000000"),
+    },
+    {
+      zeroForOne: true,  // Task 2: token1 -> token2 in pool12
+      amountSpecified: -parseEther("1"),
+      sqrtPriceLimitX96: BigInt("152398000000000000000000000000"),
+    },
+    {
+      zeroForOne: false, // Task 3: token2 -> token0 in pool02 (reverse direction)
+      amountSpecified: -parseEther("1"),
+      sqrtPriceLimitX96: BigInt("162369000000000000000000000000"),
+    },
+    // Direct CoW match group (token0 <-> token1)
+    {
+      zeroForOne: true,  // Task 4: token0 -> token1 in pool01
+      amountSpecified: -parseEther("0.5"),
+      sqrtPriceLimitX96: BigInt("152398000000000000000000000000"),
+    },
+    {
+      zeroForOne: false, // Task 5: token1 -> token0 in pool01 (reverse direction)
+      amountSpecified: -parseEther("0.5"),
+      sqrtPriceLimitX96: BigInt("162369000000000000000000000000"),
+    },
+    // AMM swap (token1 -> token2)
+    {
+      zeroForOne: true,  // Task 6: token1 -> token2 in pool12
+      amountSpecified: -parseEther("0.3"),
+      sqrtPriceLimitX96: BigInt("152398000000000000000000000000"),
+    }
+  ],
+} as const;
+
+async function createTask(numTasks: number, scenario: keyof typeof TEST_SCENARIOS = "cowMatch") {
+  console.log(`Creating ${numTasks} tasks for scenario: ${scenario}`);
+  
+  const swapParams = TEST_SCENARIOS[scenario];
+  const pools = [POOL_CONFIGS.pool01, POOL_CONFIGS.pool12, POOL_CONFIGS.pool02];
+
+  // Create each task in sequence
+  for (let i = 0; i < numTasks && i < swapParams.length; i++) {
+    console.log(`Creating task ${i + 1}`);
     
-    // Wait for the transaction to be mined
-    const receipt = await tx.wait();
+    // Select the correct pool based on the task
+    let pool;
+    if (scenario === "mixedMatching") {
+      if (i < 3) {
+        // First 3 tasks use circular pools sequence
+        pool = pools[i];
+      } else if (i < 5) {
+        // Tasks 4-5 use pool01 for direct matching
+        pool = pools[0];
+      } else {
+        // Task 6 uses pool12 for AMM swap
+        pool = pools[1];
+      }
+    } else {
+      // For other scenarios, use sequential pools
+      pool = pools[i % pools.length];
+    }
     
-    console.log(`Transaction successful with hash: ${receipt.hash}`);
-  } catch (error) {
-    console.error('Error sending transaction:', error);
+    const txHash = await swapRouter.write.swap([
+      pool,
+      swapParams[i],
+      {
+        takeClaims: false,
+        settleUsingBurn: false,
+      },
+      encodeAbiParameters(
+        parseAbiParameters("int8,address,uint8,bytes"), [
+          1,  // Enable CoW
+          account.address,
+          pools.length,
+          toHex(encodePoolKeys(pools)),
+        ]
+      ),
+    ]);
+
+    await waitForTransactionReceipt(publicClient, {
+      hash: txHash,
+    });
+    console.log("Task created:", txHash);
   }
 }
 
-// Function to create a new task with a random name every 15 seconds
-function startCreatingTasks() {
-  setInterval(() => {
-    const randomName = generateRandomName();
-    console.log(`Creating new task with name: ${randomName}`);
-    createNewTask(randomName);
-  }, 24000);
-}
+// Export the main function and scenarios
+export { createTask, TEST_SCENARIOS };
 
-// Start the process
-startCreatingTasks();
+// If running directly from command line
+if (require.main === module) {
+  const args = process.argv.slice(2);
+  const numTasks = parseInt(args[0]) || 2;
+  const scenario = (args[1] as keyof typeof TEST_SCENARIOS) || "cowMatch";
+  
+  if (!TEST_SCENARIOS[scenario]) {
+    console.error(`Invalid scenario. Available scenarios: ${Object.keys(TEST_SCENARIOS).join(", ")}`);
+    process.exit(1);
+  }
+
+  createTask(numTasks, scenario)
+    .then(() => process.exit(0))
+    .catch((error) => {
+      console.error(error);
+      process.exit(1);
+    });
+}

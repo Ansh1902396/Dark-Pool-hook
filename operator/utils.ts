@@ -110,7 +110,7 @@ let chainId = 31337;
 const avsDeploymentData = JSON.parse(fs.readFileSync(path.resolve(__dirname, `../avs/deployments/avs/${chainId}.json`), 'utf8'));
 // Load core deployment data
 const coreDeploymentData = JSON.parse(fs.readFileSync(path.resolve(__dirname, `../avs/deployments/core/${chainId}.json`), 'utf8'));
-const hookDeploymentData = JSON.parse(fs.readFileSync(path.resolve(__dirname, `../hook/script/output/${chainId}/darkCoWHook.json`)))
+export const hookDeploymentData = JSON.parse(fs.readFileSync(path.resolve(__dirname, `../hook/script/output/${chainId}/darkCoWHook.json`)))
 
 
 const delegationManagerAddress = coreDeploymentData.addresses.delegationManager; // todo: reminder to fix the naming of this contract in the deployment file, change to delegationManager
