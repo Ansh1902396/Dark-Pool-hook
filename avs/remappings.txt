@@ -13,4 +13,5 @@ openzeppelin-contracts-upgradeable/=lib/eigenlayer-middleware/lib/openzeppelin-c
 openzeppelin-contracts-v4.9.0/=lib/eigenlayer-middleware/lib/eigenlayer-contracts/lib/openzeppelin-contracts-v4.9.0/
 openzeppelin-contracts/=lib/eigenlayer-middleware/lib/openzeppelin-contracts/
 openzeppelin/=lib/eigenlayer-middleware/lib/openzeppelin-contracts-upgradeable/contracts/
+sp1-contracts/=lib/sp1-contracts/contracts/
 zeus-templates/=lib/eigenlayer-middleware/lib/eigenlayer-contracts/lib/zeus-templates/src/

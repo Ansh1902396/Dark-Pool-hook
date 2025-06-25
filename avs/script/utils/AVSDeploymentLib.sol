@@ -86,7 +86,6 @@ library AVSDeploymentLib {
                 core.rewardsCoordinator,
                 core.delegationManager,
                 core.allocationManager,
-                4
             )
         );
 

@@ -16,6 +16,9 @@ import {IAllocationManager} from "@eigenlayer/contracts/interfaces/IAllocationMa
 import {TransparentUpgradeableProxy} from
     "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 
+import {ISP1Verifier} from "sp1-contracts/src/ISP1Verifier.sol";
+
+
 
 interface IDarkCoWHook {
     struct TransferBalance {
@@ -46,6 +49,9 @@ contract OrderServiceManager is ECDSAServiceManagerBase, IOrderServiceManager {
     address public hook;
     mapping(uint32 => bytes32) public allTaskHashes;
     mapping(address => mapping(uint32 => bytes)) public allTaskResponses;
+    address public verifier;
+    bytes32 public orderProgramVKey;
+
     // uint32 public immutable MAX_RESPONSE_INTERVAL_BLOCKS;
 
     modifier onlyOperator() {
@@ -60,6 +66,12 @@ contract OrderServiceManager is ECDSAServiceManagerBase, IOrderServiceManager {
         require(msg.sender == hook, "Only hook can call this function");
         _;
     }
+    
+    struct PublicValuesStruct {
+        uint32 n;
+        uint32 a;
+        uint32 b;
+    }
 
     constructor(
         address _avsDirectory,
@@ -67,7 +79,9 @@ contract OrderServiceManager is ECDSAServiceManagerBase, IOrderServiceManager {
         address _rewardsCoordinator,
         address _delegationManager,
         address _allocationManager,
-        uint32 _maxResponseIntervalBlocks
+        uint32 _maxResponseIntervalBlocks,
+        address _verifier, 
+        bytes32 _orderProgramVKey
     )
         ECDSAServiceManagerBase(
             _avsDirectory,
@@ -78,6 +92,8 @@ contract OrderServiceManager is ECDSAServiceManagerBase, IOrderServiceManager {
         )
     {
         // MAX_RESPONSE_INTERVAL_BLOCKS = _maxResponseIntervalBlocks;
+        verifier = _verifier;
+        orderProgramVKey = _orderProgramVKey;
     }
 
     function initialize(address initialOwner, address _rewardsInitiator) external initializer {
@@ -138,6 +154,7 @@ contract OrderServiceManager is ECDSAServiceManagerBase, IOrderServiceManager {
     }
 
     //operators to respond to tasks, batch of orders (order = a single a task)
+    //Firstly, Verification using the sp1-contracts
     function respondToBatch(
         Task[] calldata tasks,
         uint32[] memory referenceTaskIndices,
@@ -223,6 +240,18 @@ contract OrderServiceManager is ECDSAServiceManagerBase, IOrderServiceManager {
 
         emit BatchResponse(referenceTaskIndices, msg.sender);
 
+    }
+
+
+    // for
+    function verifyOrderProof(bytes calldata _publicValues, bytes calldata _proofBytes)
+        public
+        view
+        returns (uint32, uint32, uint32)
+    {
+        ISP1Verifier(verifier).verifyProof(orderProgramVKey, _publicValues, _proofBytes);
+        PublicValuesStruct memory publicValues = abi.decode(_publicValues, (PublicValuesStruct));
+        return (publicValues.n, publicValues.a, publicValues.b);
     }
 
     function getMessageHash(
