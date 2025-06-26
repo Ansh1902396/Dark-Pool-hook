@@ -16,3 +16,6 @@
 [submodule "avs/lib/sp1-contracts"]
 	path = avs/lib/sp1-contracts
 	url = https://github.com/succinctlabs/sp1-contracts
+[submodule "hook/lib/sp1-contracts"]
+	path = hook/lib/sp1-contracts
+	url = https://github.com/succinctlabs/sp1-contracts

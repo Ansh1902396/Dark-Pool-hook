@@ -166,7 +166,7 @@ contract DarkCoWHook is BaseHook{
         );
     }
 
-    // When is this function called, when the settleBalances funciton is called, to unlock the poolmanager
+    // When is this function called, when the settleBalances function is called, to unlock the poolmanager
     function unlockCallback(
         bytes calldata data
     ) external onlyPoolManager returns (bytes memory) {

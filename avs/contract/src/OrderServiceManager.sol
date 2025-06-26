@@ -47,21 +47,7 @@ contract OrderServiceManager is ECDSAServiceManagerBase, IOrderServiceManager {
     event ProveRequest(
         uint32 indexed taskIndex,
         address indexed operator,
-        bytes32 marketCurrentPrice,
-        uint256 marketBlockTimestamp,
-        bytes32 treeRoot,
-        bytes32 nullifierHash,
-        address walletAddress,
-        address tokenIn,
-        address tokenOut,
-        uint256 amountIn,
-        uint256 minAmountOut,
-        uint256 targetPrice,
-        uint256 deadline,
-        bytes32 commitmentNullifier,
-        uint256 balance,
-        bytes32[] siblings,
-        uint32[] indices
+        ProveRequestData provdata
     );
 
     uint32 public latestTaskNum;
@@ -257,11 +243,8 @@ contract OrderServiceManager is ECDSAServiceManagerBase, IOrderServiceManager {
 
         // Verify the order proof - convert memory to calldata-compatible format
         verifyOrderProofInternal(publicValues, signature);
-        
-        // Emit prove request event for off-chain processing
-        emit ProveRequest(
-            referenceTaskIndices[0],
-            msg.sender,
+
+        ProveRequestData memory args = ProveRequestData(
             proveData.marketCurrentPrice,
             proveData.marketBlockTimestamp,
             proveData.treeRoot,
@@ -277,6 +260,13 @@ contract OrderServiceManager is ECDSAServiceManagerBase, IOrderServiceManager {
             proveData.balance,
             proveData.siblings,
             proveData.indices
+        );
+        
+        // Emit prove request event for off-chain processing
+        emit ProveRequest(
+            referenceTaskIndices[0],
+            msg.sender,
+            args
         );
         
         // Settle all balances in one call

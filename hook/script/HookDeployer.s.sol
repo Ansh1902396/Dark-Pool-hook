@@ -13,7 +13,6 @@ import {V4Quoter} from "v4-periphery/src/lens/V4Quoter.sol";
 import {TickMath} from "v4-core/libraries/TickMath.sol";
 
 
-import {OrderServiceManager} from "./OrderServiceManager.sol";
 import {DarkCoWHook} from "../src/DarkCoWHook.sol";
 import {HookMiner} from "v4-periphery/src/utils/HookMiner.sol";
 import {ModifyLiquidityParams, SwapParams} from "v4-core/types/PoolOperation.sol";
@@ -43,7 +42,7 @@ contract HookDeployer is Script, StdCheats {
     // address serviceManager=0x5eb3bc0a489c5a8288765d2336659ebca68fcd00;
 
 
-    function run() public {
+    function run(address serviceManager) public {
         vm.createSelectFork("http://localhost:8545");
 
         vm.startBroadcast();
@@ -51,7 +50,7 @@ contract HookDeployer is Script, StdCheats {
         quoter = new V4Quoter(manager);
         deployMintAndApprove2Currencies();
 
-        deployHookToAnvil();
+        deployHookToAnvil(serviceManager);
 
         initPoolAndAddLiquidity();
         initToken2PoolsAndAddLiquidity();
@@ -146,23 +145,24 @@ contract HookDeployer is Script, StdCheats {
         tokenC.approve(address(swapRouter), type(uint256).max);
     }
 
-    function deployHookToAnvil() internal {
+    function deployHookToAnvil(address serviceManager) internal {
         uint160 flags = uint160(
             Hooks.AFTER_INITIALIZE_FLAG |
                 Hooks.BEFORE_SWAP_FLAG |
                 Hooks.BEFORE_SWAP_RETURNS_DELTA_FLAG
         );
+
         (address hookAddress, bytes32 salt) = HookMiner.find(
             CREATE2_FACTORY,
             flags,
             type(DarkCoWHook).creationCode,
-            abi.encode(address(manager), serviceManager)
+            abi.encode(address(manager)
+            )
         );
         hook = new DarkCoWHook{salt: salt}(manager, serviceManager);
         require(address(hook) == hookAddress, "hook: hook address mismatch");
         
         // Set the hook address in the service manager
-        // OrderServiceManager(serviceManager).setHook(address(hook));
     }
 
     function initPoolAndAddLiquidity() internal {
