@@ -12,7 +12,6 @@ import {Currency, CurrencyLibrary} from "v4-core/types/Currency.sol";
 import {V4Quoter} from "v4-periphery/src/lens/V4Quoter.sol";
 import {TickMath} from "v4-core/libraries/TickMath.sol";
 
-
 import {DarkCoWHook} from "../src/DarkCoWHook.sol";
 import {HookMiner} from "v4-periphery/src/utils/HookMiner.sol";
 import {ModifyLiquidityParams, SwapParams} from "v4-core/types/PoolOperation.sol";
@@ -21,6 +20,7 @@ import {ModifyLiquidityParams, SwapParams} from "v4-core/types/PoolOperation.sol
 import "forge-std/Script.sol";
 import "forge-std/console.sol";
 import "forge-std/StdCheats.sol";
+import "forge-std/StdUtils.sol";
 
 contract HookDeployer is Script, StdCheats {
     using CurrencyLibrary for Currency;
@@ -152,12 +152,13 @@ contract HookDeployer is Script, StdCheats {
                 Hooks.BEFORE_SWAP_RETURNS_DELTA_FLAG
         );
 
+        
+
         (address hookAddress, bytes32 salt) = HookMiner.find(
             CREATE2_FACTORY,
             flags,
             type(DarkCoWHook).creationCode,
-            abi.encode(address(manager)
-            )
+            abi.encode(address(manager) , serviceManager)
         );
         hook = new DarkCoWHook{salt: salt}(manager, serviceManager);
         require(address(hook) == hookAddress, "hook: hook address mismatch");
