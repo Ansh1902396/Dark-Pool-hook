@@ -1,16 +1,11 @@
-use axum::{
-    extract::State,
-    http::StatusCode,
-    response::IntoResponse,
-    routing::post,
-    Json, Router,
-};
-use base64::{engine::general_purpose, Engine as _};
+use axum::{Json, Router, extract::State, http::StatusCode, response::IntoResponse, routing::post};
+use base64::{Engine as _, engine::general_purpose};
 use hex::FromHex;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use sp1_sdk::{
-    include_elf, utils, ProverClient, SP1ProofWithPublicValues, SP1Stdin, SP1ProvingKey, SP1VerifyingKey,EnvProver
+    EnvProver, ProverClient, SP1ProofWithPublicValues, SP1ProvingKey, SP1Stdin, SP1VerifyingKey,
+    include_elf, utils,
 };
 extern crate std;
 
@@ -48,11 +43,11 @@ static STATE: Lazy<AppState> = Lazy::new(|| {
 /// ────────────────  Helper: decode 0x… hex into fixed array  ────────────────
 fn hex_to_array<const N: usize>(s: &str) -> anyhow::Result<[u8; N]> {
     let s = s.strip_prefix("0x").unwrap_or(s);
-    let bytes = hex::decode(s)
-        .map_err(|e| anyhow::anyhow!("hex decode error: {e}"))?;
-    
+    let bytes = hex::decode(s).map_err(|e| anyhow::anyhow!("hex decode error: {e}"))?;
+
     let len = bytes.len();
-    bytes.try_into()
+    bytes
+        .try_into()
         .map_err(|_| anyhow::anyhow!("Expected {} bytes, got {}", N, len))
 }
 
@@ -61,13 +56,13 @@ fn hex_to_array<const N: usize>(s: &str) -> anyhow::Result<[u8; N]> {
 struct ProveRequest {
     // Public
     market: MarketJson,
-    tree_root: String,        // 32-byte hex
-    nullifier_hash: String,   // 32-byte hex
+    tree_root: String,      // 32-byte hex
+    nullifier_hash: String, // 32-byte hex
     // Private
     order: OrderJson,
     commitment_nullifier: String, // 32-byte hex
     balance: u64,
-    siblings: Vec<String>,    // Vec<32-byte hex>
+    siblings: Vec<String>, // Vec<32-byte hex>
     indices: Vec<u8>,
 }
 
@@ -79,9 +74,9 @@ struct MarketJson {
 
 #[derive(Deserialize)]
 struct OrderJson {
-    wallet_address: String,   // 20-byte hex
-    token_in: String,         // 20-byte hex
-    token_out: String,        // 20-byte hex
+    wallet_address: String, // 20-byte hex
+    token_in: String,       // 20-byte hex
+    token_out: String,      // 20-byte hex
     amount_in: u64,
     min_amount_out: u64,
     target_price: u64,
@@ -101,6 +96,9 @@ struct ProveResponse {
     // proof
     proof_b64: String,
     verified: bool,
+
+    vkey: Arc<SP1VerifyingKey>,
+    pk: Arc<SP1ProvingKey>,
 }
 
 fn to_500<E: std::fmt::Display>(err: E) -> (StatusCode, String) {
@@ -137,7 +135,8 @@ async fn prove_handler(
         .siblings
         .iter()
         .map(|h| hex_to_array::<32>(h))
-        .collect::<Result<_, _>>().map_err(to_500)?;
+        .collect::<Result<_, _>>()
+        .map_err(to_500)?;
 
     // ─── Build stdin exactly like in your script ───
     let mut stdin = SP1Stdin::new();
@@ -167,15 +166,15 @@ async fn prove_handler(
     let verified = state.client.verify(&proof, &state.vk).is_ok();
 
     // ─── Read guest-committed outputs ───
-    let valid          = proof.public_values.read::<bool>();
-    let out_nullifier  = proof.public_values.read::<[u8; 32]>();
-    let out_wallet     = proof.public_values.read::<[u8; 20]>();
-    let amount_in      = proof.public_values.read::<u64>();
+    let valid = proof.public_values.read::<bool>();
+    let out_nullifier = proof.public_values.read::<[u8; 32]>();
+    let out_wallet = proof.public_values.read::<[u8; 20]>();
+    let amount_in = proof.public_values.read::<u64>();
     let min_amount_out = proof.public_values.read::<u64>();
 
     // ─── Serialize proof to b64 ───
-    let proof_bytes = serde_json::to_vec(&proof).map_err(to_500)?;          // Vec<u8>
-    let proof_b64   = general_purpose::URL_SAFE_NO_PAD.encode(&proof_bytes);
+    let proof_bytes = serde_json::to_vec(&proof).map_err(to_500)?; // Vec<u8>
+    let proof_b64 = general_purpose::URL_SAFE_NO_PAD.encode(&proof_bytes);
 
     // ─── Return JSON ───
     Ok(Json(ProveResponse {
@@ -187,6 +186,8 @@ async fn prove_handler(
         min_amount_out,
         proof_b64,
         verified,
+        vkey: state.vk,
+        pk: state.pk,
     }))
 }
 
