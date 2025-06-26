@@ -59,5 +59,5 @@ contract CrossChainRouter is Ownable{
         SwapParams memory params,
         SwapSettings memory settings,
         bytes memory hookData        
-    ) {}
+    ) public {}
 }
