@@ -13,7 +13,7 @@ import {V4Quoter} from "v4-periphery/src/lens/V4Quoter.sol";
 import {TickMath} from "v4-core/libraries/TickMath.sol";
 
 
-import { OrderServiceManager} from "avs/contract/src/OrderServiceManager.sol";
+import {OrderServiceManager} from "./OrderServiceManager.sol";
 import {DarkCoWHook} from "../src/DarkCoWHook.sol";
 import {HookMiner} from "v4-periphery/src/utils/HookMiner.sol";
 import {ModifyLiquidityParams, SwapParams} from "v4-core/types/PoolOperation.sol";
@@ -102,6 +102,8 @@ contract HookDeployer is Script, StdCheats {
             vm.projectRoot(),
             "/script/output/"
         );
+
+        
         string memory chainDir = string.concat(vm.toString(block.chainid), "/");
         string memory outputFilePath = string.concat(
             outputDir,
