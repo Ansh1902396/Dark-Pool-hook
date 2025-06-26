@@ -102,20 +102,20 @@ export const publicClient = createPublicClient({
     pollingInterval: 2000,
 });
 // Setup env variables
-const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
+const provider = new ethers.providers.JsonRpcProvider(process.env.RPC_URL);
 const wallet = new ethers.Wallet(process.env.PRIVATE_KEY!, provider);
 /// TODO: Hack
 let chainId = 31337;
 
-const avsDeploymentData = JSON.parse(fs.readFileSync(path.resolve(__dirname, `../avs/deployments/avs/${chainId}.json`), 'utf8'));
+const avsDeploymentData = JSON.parse(fs.readFileSync(path.resolve(__dirname, `../avs/contract/deployments/avs/${chainId}.json`), 'utf8'));
 // Load core deployment data
-const coreDeploymentData = JSON.parse(fs.readFileSync(path.resolve(__dirname, `../avs/deployments/core/${chainId}.json`), 'utf8'));
+const coreDeploymentData = JSON.parse(fs.readFileSync(path.resolve(__dirname, `../avs/contract/deployments/core/${chainId}.json`), 'utf8'));
 export const hookDeploymentData = JSON.parse(fs.readFileSync(path.resolve(__dirname, `../hook/script/output/${chainId}/darkCoWHook.json`)))
 
 
 const delegationManagerAddress = coreDeploymentData.addresses.delegationManager; // todo: reminder to fix the naming of this contract in the deployment file, change to delegationManager
 const avsDirectoryAddress = coreDeploymentData.addresses.avsDirectory;
-const avsServiceManagerAddress = avsDeploymentData.addresses.orderServiceManager;
+export const avsServiceManagerAddress = avsDeploymentData.addresses.orderServiceManager;
 const ecdsaStakeRegistryAddress = avsDeploymentData.addresses.stakeRegistry;
 const hookAddr = hookDeploymentData.addresses.hook;
 const quoterAddr = hookDeploymentData.addresses.quoter;

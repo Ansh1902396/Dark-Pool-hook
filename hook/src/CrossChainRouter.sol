@@ -52,5 +52,12 @@ contract CrossChainRouter is Ownable{
         address recipientAddress;
     }
 
+    //1. Bridging funds to to the users on the other chain.
 
+    function swap (
+        PoolKey memory key,
+        SwapParams memory params,
+        SwapSettings memory settings,
+        bytes memory hookData        
+    ) {}
 }

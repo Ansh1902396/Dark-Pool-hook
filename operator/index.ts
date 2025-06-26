@@ -16,8 +16,9 @@ import {
 import { Mathb } from "./math";
 import { ethers } from "ethers";
 
+
 // Setup env variables
-const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
+const provider = new ethers.providers.JsonRpcProvider(process.env.RPC_URL);
 const wallet = new ethers.Wallet(process.env.PRIVATE_KEY!, provider);
 /// TODO: Hack
 let chainId = 31337;
@@ -53,7 +54,7 @@ interface Result {
 const safeRegisterOperator = async () => {
     try {
         console.log("Checking operator registration status...");
-        
+
         // Check if operator is already registered
         let isRegistered = false;
         try {
@@ -62,33 +63,33 @@ const safeRegisterOperator = async () => {
         } catch (checkError) {
             console.log("Could not check registration status, attempting registration...");
         }
-        
+
         if (isRegistered) {
             console.log("Operator already registered, skipping registration");
             return;
         }
-        
+
         // Attempt to register the operator
         console.log("Registering operator...");
         await registerOperator();
         console.log("Operator registered successfully");
-        
+
     } catch (error: any) {
         // Handle specific initialization errors
-        if (error.message?.includes("already initialized") || 
+        if (error.message?.includes("already initialized") ||
             error.message?.includes("already registered") ||
             error.reason?.includes("already initialized")) {
             console.log("Operator already registered (caught initialization error)");
             return;
         }
-        
+
         // Handle revert errors
-        if (error.code === 'CALL_EXCEPTION' && 
+        if (error.code === 'CALL_EXCEPTION' &&
             error.reason?.includes("already initialized")) {
             console.log("Operator already registered (contract already initialized)");
             return;
         }
-        
+
         // Log the error but don't crash the application
         console.error("Registration error (continuing anyway):", error.message || error);
         console.log("Continuing with monitoring...");
@@ -97,7 +98,7 @@ const safeRegisterOperator = async () => {
 
 const startMonitoring = async () => {
     console.log("Starting task monitoring...");
-    
+
     const unwatchTasks = serviceManager.on("NewTaskCreated", async (logs: any) => {
         try {
             const parsedLogs = parseEventLogs({
@@ -109,7 +110,7 @@ const startMonitoring = async () => {
             const event = parsedLogs[0] as any;
             // Access the task data from the parsed event
             const taskData = event.args?.task || event.args;
-            
+
             // Safely get pool key
             let poolKey;
             try {
@@ -210,7 +211,7 @@ const processBatch = async (batchNumber: bigint) => {
                     })
             );
         }
-        
+
         await Promise.allSettled(promises); // Use allSettled to handle partial failures
 
         // Check for CoW matching opportunities
@@ -384,12 +385,12 @@ const processBatch = async (batchNumber: bigint) => {
                     result.swapBalances,
                     signature,
                 ]);
-                
+
                 console.log("Transaction submitted successfully");
-                
+
             } catch (txError: any) {
                 // Better error handling for transaction submission
-                if (txError.message?.includes("signature") || 
+                if (txError.message?.includes("signature") ||
                     txError.message?.includes("unauthorized")) {
                     console.log("Transaction submitted (signature/auth handled by contract)");
                 } else {
@@ -403,7 +404,7 @@ const processBatch = async (batchNumber: bigint) => {
         // Remove processed tasks from batch
         delete batches[batchNumber.toString()];
         console.log(`Batch ${batchNumber} processed and cleaned up`);
-        
+
     } catch (error) {
         console.error("Error processing batch:", error);
         // Don't crash, just log and continue
@@ -412,17 +413,17 @@ const processBatch = async (batchNumber: bigint) => {
 
 const main = async () => {
     console.log("Starting Dark Pool Monitoring Service...");
-    
+
     try {
         // Safe operator registration with comprehensive error handling
         await safeRegisterOperator();
-        
+
         // Start monitoring regardless of registration status
         console.log("Starting task monitoring...");
         await startMonitoring();
-        
+
         console.log("Dark Pool Monitoring Service is now running...");
-        
+
     } catch (error) {
         console.error("Fatal error in main:", error);
         process.exitCode = 1;

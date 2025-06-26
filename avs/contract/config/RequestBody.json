@@ -1,0 +1,27 @@
+{
+  "market": {
+    "current_price": 2050000000,
+    "block_timestamp": 1735600000
+  },
+  "tree_root": "0x1111111111111111111111111111111111111111111111111111111111111111",
+  "nullifier_hash": "0x2222222222222222222222222222222222222222222222222222222222222222",
+
+  "order": {
+    "wallet_address": "0x0000000000000000000000000000000000000001",
+    "token_in": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "token_out": "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "amount_in": 5000000000000000000,
+    "min_amount_out": 10000000000,
+    "target_price": 2000000000,
+    "deadline": 1735689600
+  },
+
+  "commitment_nullifier": "0x3333333333333333333333333333333333333333333333333333333333333333",
+  "balance": 10000000000000000000,
+
+  "siblings": [
+    "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  ],
+  "indices": [0, 1]
+}

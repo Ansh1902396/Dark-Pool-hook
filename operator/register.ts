@@ -10,9 +10,12 @@ import {
     serviceManager,
 } from "./utils";
 
+import { splitSignature } from "ethers/lib/utils";
+
+
 
 // Setup env variables
-const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
+const provider = new ethers.providers.JsonRpcProvider(process.env.RPC_URL);
 const wallet = new ethers.Wallet(process.env.PRIVATE_KEY!, provider);
 const wallet_2 = new ethers.Wallet(process.env.PRIVATE_KEY_2!, provider);
 
@@ -30,7 +33,7 @@ export const registerOperator = async () => {
     } catch (error) {
         console.error("Error in registering as operator:", error);
     }
-    const salt = ethers.zeroPadValue(ethers.randomBytes(32), 32); // force pad
+    const salt = ethers.utils.zeroPad(ethers.utils.randomBytes(32), 32); // force pad
     const expiry = Math.floor(Date.now() / 1000) + 3600; // Example 
 
     const currentNonce = await provider.getTransactionCount(wallet.address);
@@ -62,12 +65,16 @@ export const registerOperator = async () => {
 
 
     // // Sign the digest hash with the operator's private key
-    console.log("Signing digest hash with operator's private key");
-    const operatorSigningKey = new ethers.SigningKey(process.env.PRIVATE_KEY!);
-    const operatorSignedDigestHash = operatorSigningKey.sign(operatorDigestHash);
+    // Sign the digest hash with the operator's private key
+console.log("Signing digest hash with operator's private key");
 
-    // Encode the signature in the required format
-    operatorSignatureWithSaltAndExpiry.signature = ethers.Signature.from(operatorSignedDigestHash).serialized;
+    const operatorSigningKey = new ethers.utils.SigningKey(process.env.PRIVATE_KEY!);
+
+    // signDigest returns the rsv signature as a hex string
+    const operatorSignedDigestHash = operatorSigningKey.signDigest(operatorDigestHash);
+
+    // Split into r, s, v
+    const parsedSignature = splitSignature(operatorSignedDigestHash); // or .r/.s/.v if needed
 
     console.log("Registering Operator to AVS Registry contract");
 
