@@ -46,5 +46,5 @@ cargo run --release
 ***New terminal commands***
 ```
 cd operator
-npx ts-node prover-request-handler.ts
+npx ts-node prove-request-handler.ts
 ```
