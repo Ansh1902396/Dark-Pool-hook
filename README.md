@@ -1,8 +1,17 @@
 ## Dark Cross CoW Hook 
 
+### Architecture:
+![Architecture Diagram](Architecture.png)
+
 **Order Matching Network with end-to-end privacy using ZKP**
 
+### Verifying Design Flow:
+
+![Verifying Diagram](Verifying_Flow.png)
+
 ### Execution Flow:
+
+![Execution Diagram](Execution_Flow.png)
 
 0. Start anvil in a terminal:
 ***Run the rest of the commands in a new terminal***
