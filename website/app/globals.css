@@ -1,0 +1,144 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ───────────────────────── Design tokens ─────────────────────────
+   "Dark Pool Depth" — near-black canvas, one electric mint-cyan accent,
+   monospace technical labels. Tokens are consumed by tailwind.config.ts. */
+:root {
+  --bg: #0a0b0d;
+  --surface: #101216;
+  --raised: #16191f;
+  --fg: #e7e9ec;
+  --muted: #9ba1ac;
+  --faint: #5b616e;
+  --line: rgba(255, 255, 255, 0.08);
+  --accent: #5eead4;
+  --accent-soft: rgba(94, 234, 212, 0.12);
+
+  /* Map the self-hosted Geist faces (set on <html>) to our semantic names */
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, monospace;
+}
+
+@layer base {
+  * {
+    border-color: var(--line);
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--bg);
+    color: var(--fg);
+    font-feature-settings: "ss01", "cv01", "cv11";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection {
+    background: rgba(94, 234, 212, 0.28);
+    color: #ffffff;
+  }
+
+  /* Anchor offset so sticky nav doesn't cover section headings */
+  section[id] {
+    scroll-margin-top: 84px;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
+
+  /* Thin, dark scrollbar to match the canvas */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #2a2e36 transparent;
+  }
+  *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  *::-webkit-scrollbar-thumb {
+    background: #23272f;
+    border-radius: 999px;
+    border: 3px solid var(--bg);
+  }
+  *::-webkit-scrollbar-thumb:hover {
+    background: #2f343d;
+  }
+}
+
+@layer components {
+  /* Centered content shell used by every section */
+  .shell {
+    width: 100%;
+    max-width: 72rem;
+    margin-inline: auto;
+    padding-inline: 1.5rem;
+  }
+  @media (min-width: 768px) {
+    .shell {
+      padding-inline: 2.5rem;
+    }
+  }
+
+  /* Mono section / kicker labels: 01 — THE HOOK */
+  .text-label {
+    font-family: var(--font-mono), monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    font-size: 0.72rem;
+    color: var(--faint);
+  }
+
+  /* Faint engineering grid — applied behind select sections */
+  .depth-grid {
+    background-image:
+      linear-gradient(to right, rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+    background-size: 56px 56px;
+    -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 40%, #000 30%, transparent 100%);
+    mask-image: radial-gradient(ellipse 80% 60% at 50% 40%, #000 30%, transparent 100%);
+  }
+}
+
+@layer utilities {
+  /* Liquidity "depth" radial wash for the hero and section transitions */
+  .depth-wash {
+    background:
+      radial-gradient(120% 90% at 50% -10%, rgba(94, 234, 212, 0.1) 0%, transparent 55%),
+      radial-gradient(80% 60% at 80% 10%, rgba(56, 189, 248, 0.06) 0%, transparent 60%),
+      radial-gradient(100% 100% at 50% 120%, rgba(94, 234, 212, 0.05) 0%, transparent 60%);
+  }
+
+  /* Text that surfaces out of the dark (used for big display lines) */
+  .text-surface-glow {
+    text-shadow: 0 0 40px rgba(94, 234, 212, 0.18);
+  }
+
+  .fade-bottom {
+    -webkit-mask-image: linear-gradient(to bottom, #000 70%, transparent 100%);
+    mask-image: linear-gradient(to bottom, #000 70%, transparent 100%);
+  }
+}
+
+/* Respect reduced-motion: kill smooth scroll + decorative animation */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
