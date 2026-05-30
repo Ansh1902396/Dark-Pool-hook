@@ -10,17 +10,27 @@ import {
     serviceManager,
 } from "./utils";
 
-import { splitSignature } from "ethers/lib/utils";
+import { Signature } from "ethers";
 
 
 
 // Setup env variables
-const provider = new ethers.providers.JsonRpcProvider(process.env.RPC_URL);
-const wallet = new ethers.Wallet(process.env.PRIVATE_KEY!, provider);
-const wallet_2 = new ethers.Wallet(process.env.PRIVATE_KEY_2!, provider);
+if (!process.env.PRIVATE_KEY) {
+    throw new Error("PRIVATE_KEY environment variable is required");
+}
+if (!process.env.RPC_URL) {
+    throw new Error("RPC_URL environment variable is required");
+}
+
+const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
+const wallet = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
+
+// Only create wallet_2 if PRIVATE_KEY_2 is provided
+const wallet_2 = process.env.PRIVATE_KEY_2
+    ? new ethers.Wallet(process.env.PRIVATE_KEY_2, provider)
+    : null;
 
 export const registerOperator = async () => {
-
     // Registers as an Operator in EigenLayer.
     try {
         const tx1 = await delegationManager.registerAsOperator(
@@ -33,11 +43,9 @@ export const registerOperator = async () => {
     } catch (error) {
         console.error("Error in registering as operator:", error);
     }
-    const salt = ethers.utils.zeroPad(ethers.utils.randomBytes(32), 32); // force pad
+    const salt = ethers.zeroPadValue(ethers.randomBytes(32), 32); // force pad
     const expiry = Math.floor(Date.now() / 1000) + 3600; // Example 
-
     const currentNonce = await provider.getTransactionCount(wallet.address);
-
 
     const tx = await avsDirectory.initialize(wallet.address, 0, {
         nonce: currentNonce // Use correct nonce explicitly
@@ -54,7 +62,6 @@ export const registerOperator = async () => {
     };
 
     // Calculate the digest hash, which is a unique value representing the operator, avs, unique value (salt) and expiration date.
-
     const operatorDigestHash = await avsDirectory.calculateOperatorAVSRegistrationDigestHash(
         wallet.address,
         await serviceManager.getAddress(),
@@ -66,15 +73,14 @@ export const registerOperator = async () => {
 
     // // Sign the digest hash with the operator's private key
     // Sign the digest hash with the operator's private key
-console.log("Signing digest hash with operator's private key");
+    console.log("Signing digest hash with operator's private key");
 
-    const operatorSigningKey = new ethers.utils.SigningKey(process.env.PRIVATE_KEY!);
+    const operatorSigningKey = new ethers.SigningKey(process.env.PRIVATE_KEY!);
 
-    // signDigest returns the rsv signature as a hex string
-    const operatorSignedDigestHash = operatorSigningKey.signDigest(operatorDigestHash);
-
+    // sign returns the rsv signature as a hex string
+    const operatorSignedDigestHash = operatorSigningKey.sign(operatorDigestHash);
     // Split into r, s, v
-    const parsedSignature = splitSignature(operatorSignedDigestHash); // or .r/.s/.v if needed
+    const parsedSignature = Signature.from(operatorSignedDigestHash); // or .r/.s/.v if needed
 
     console.log("Registering Operator to AVS Registry contract");
 

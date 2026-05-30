@@ -4,6 +4,8 @@ node_modules/
 # Ignore built output
 dist/
 
+lib/v4-periphery
+
 # Ignore environment-specific files
 .env
 

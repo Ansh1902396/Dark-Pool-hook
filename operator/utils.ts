@@ -1,8 +1,10 @@
 import * as dotenv from "dotenv";
 import { ethers } from "ethers";
-dotenv.config();
+import * as path from "path";
 const fs = require('fs');
-const path = require('path');
+
+// Load .env from the project root
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 import {
     createPublicClient,
@@ -85,8 +87,16 @@ export type PoolKey = {
 };
 
 
+// Validate required environment variables
+if (!process.env.PRIVATE_KEY) {
+    throw new Error("PRIVATE_KEY environment variable is required");
+}
+if (!process.env.RPC_URL) {
+    throw new Error("RPC_URL environment variable is required");
+}
+
 export const account = privateKeyToAccount(
-    process.env.PRIVATE_KEY! as `0x${string}`
+    process.env.PRIVATE_KEY as `0x${string}`
 );
 
 export const walletClient = createWalletClient({
@@ -101,9 +111,10 @@ export const publicClient = createPublicClient({
     transport: http(),
     pollingInterval: 2000,
 });
-// Setup env variables
-const provider = new ethers.providers.JsonRpcProvider(process.env.RPC_URL);
-const wallet = new ethers.Wallet(process.env.PRIVATE_KEY!, provider);
+
+// Setup ethers provider and wallet
+const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
+const wallet = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
 /// TODO: Hack
 let chainId = 31337;
 
